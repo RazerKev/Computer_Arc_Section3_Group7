@@ -1,0 +1,23 @@
+//Testbench
+`timescale 1ns/ 1ns
+
+module Lab2_tb();
+
+reg clk;
+reg WRT;
+reg [4:0] WRA,RDAA,RDAB;
+reg [63:0] WRD;
+wire [63:0] RDDA, RDDB;
+
+Lab2 DUT 
+(
+.wrAddr(WRA), 
+.wrData(WRD), 
+.rdAddrA(RDAA), 
+.rdDataA(RDDA), 
+.rdAddrB(RDAB), 
+.rdDataB(RDDB), 
+.clk(Clk), 
+.write(WRT)
+);
+
