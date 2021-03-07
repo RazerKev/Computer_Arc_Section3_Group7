@@ -1,33 +1,32 @@
-module alu_file (a, b, Cin, sel, Cout, out);
+module alu (a, b, Cin, sel, cOut, out);
 input [63:0] a, b;
 input [7:0] sel;
 input [1:0] Cin;
-output [1:0] Cout; 
+output [1:0] cOut; 
 output [63:0] out; 
 
 wire [63:0] a_or_a_invert, a_or_b_invert; 
 wire [63:0] orOut, andOut, xorOut, adderOut;
- 
 
+shifter shift_op (mux1, mux2, a, b[5:0]); 
 mux_A_2_to_1 muxA (a,sel[0], a_or_a_invert); 
 mux_B_2_to_1 muxB (b, sel[1], b_or_b_invert); 
-orOp or_op (mux1, mux2, orOut); 
-andOp and_Op (mux1, mux2, andOut); 
-xorOp xor_Op (mux1, mux2, xorOut);
-Adder adder_sub (Cout, Cin, a, mux2, );
-mux_4_1 result_mux (orOut, andOut, xorOut, adderOut, sel[5:2], out);  
-shifter shift_op (mux1, mux2, a, b[5:0]); 
-
+mux_4_1 result_mux (orOut, andOut, xorOut, adderOut, sel[7:2], out);  
+orOp or_op (a_or_b_invert, b_or_b_invert, orOut); 
+andOp and_Op (a_or_b_invert, b_or_b_invert, andOut); 
+xorOp xor_Op (a_or_b_invert, b_or_b_invert, xorOut);
+Adder adder_sub (adderOut, cOut, a, b_or_b_invert, Cin);
+ 
 endmodule 
 
-module shifter (A_or_B, shift_amount, left_shift, right_shift)
+module shifter (A_or_B, shift_amount, left_shift, right_shift);
 
 input [63:0] A_or_B; 
 input [5:0] shift_amount; 
 output [63:0] left_shift, right_shift; 
 
-out1 = input1 << input2;
-out2 = input1 >> input2;  
+assign shift_left = A_or_B << shift_amount;
+assign shift_right = A_or_B >> shift_amount;  
 
 endmodule
 
@@ -61,7 +60,7 @@ always @ (B or fsel)
 endmodule  
  
 module mux_4_1 (a0, b0, c0, d0, e0, f0, fsel, R); 
-input [63:0] a0, b0, c0, d0;
+input [63:0] a0, b0, c0, d0, e0, f0;
 input [2:0] fsel; 
 output [63:0] R; 
 reg [63:0] R; 
