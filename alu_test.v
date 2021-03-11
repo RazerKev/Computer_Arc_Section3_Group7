@@ -6,9 +6,12 @@ input [1:0] Cin;
 output [63:0] out; 
 output [1:0] cOut; 
 
-
+wire [63:0] a_or_a_invert, b_or_b_invert; 
+wire [63:0] orOut, andOut, xorOut, adderOut, shiftRight, shiftLeft; 
+ 
 //Flags declaration - 4 bits, either true or false
-output [3:0] status; 
+output [3:0] status;
+ 
 wire flagC = status[0]; // Don't know if "reg" should be added (output reg...)
 wire flagZ = status[1]; // Declare "output reg" if it is being assigned in sequential code, such as "always" block. 
 wire flagO = status[2];
@@ -23,17 +26,15 @@ assign flagO = ~(a_or_a_invert ^ b_or_b_invert) & (a_or_a_invert ^ adderOut);
 //assign flagN = (Cout[63] == 1 && (~A || ~B)); //Checks if the last bit of Cout is 1 and if the operation is subtraction. Can add subtraction (1000 - 1111 = 0111) so check if it contains a 1 and then it a negative number. ~A or ~B is -A or -B
 assign flagN = out[63];//((A+B) < 0);
 
-wire [63:0] a_or_a_invert, a_or_b_invert; 
-wire [63:0] orOut, andOut, xorOut, adderOut, shiftRight, shiftLeft;
 
 shift_right rightShift_op (a, b[5:0], shiftRight);
 shift_left leftShift_op (a, b[5:0], shiftLeft);  
 mux_A_2_to_1 muxA (a,sel[0], a_or_a_invert); 
 mux_B_2_to_1 muxB (b, sel[1], b_or_b_invert); 
 mux_6_1 result_mux (orOut, andOut, xorOut, adderOut, shifRight, shiftLeft, sel[4:2], out);  
-orOp or_op (a_or_b_invert, b_or_b_invert, orOut); 
-andOp and_Op (a_or_b_invert, b_or_b_invert, andOut); 
-xorOp xor_Op (a_or_b_invert, b_or_b_invert, xorOut);
+orOp or_op (a_or_a_invert, b_or_b_invert, orOut); 
+andOp and_Op (a_or_a_invert, b_or_b_invert, andOut); 
+xorOp xor_Op (a_or_a_invert, b_or_b_invert, xorOut);
 Adder adder_sub (adderOut, cOut, a, b_or_b_invert, Cin);
 
  

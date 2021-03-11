@@ -2,24 +2,24 @@
 module alu_testbench(); 
 
 reg [63:0] a,b; 
+reg [1:0] Cin;
 reg [4:0] sel; 
-reg [1:0] Cin; 
-wire [1:0] cOut; 
-wire [63:0] out; 
+wire [63:0] out;  
+wire [1:0] cOut;  
 wire [3:0] status;
 
-alu dut (
+alu_test dut (
 				a, 
 				b,
-				sel,
 				Cin,
-				cOut, 
-				out,
+				sel,
+				out, 
+				cOut,
 				status); 
 				
 initial begin 
 
-
+$monitor("sel=%d a=%d b=%d out=%d Cin=%d cOut=%d status=%d", sel,a,b,out, Cin, cOut, status);
 #1 a = 64'd3; b = 64'd1; sel = 5'b10000; Cin = 1'd0; //A+1
 #1 a = 64'd2; b = 64'd2; sel = 5'b10000; Cin = 1'd0; //A + B 
 #1 a = 64'd3; b = 64'd2; sel = 5'b10001; Cin = 1'd1; //A - B
@@ -36,5 +36,13 @@ initial begin
 #1 a = 64'd2; b = 64'd4; sel = 5'b10001; Cin = 1'd1; //Negative flag 
 #1 a = 64'd4; b = 64'd6; sel = 5'b10000; Cin = 1'd1;//carry out
 #1 a = 64'd7; b = 64'd2; sel = 5'b10001; Cin = 1'd1;//overflow 
+
 end 
+
+assign out = dut.out;
+assign status = dut.status;
+assign cOut = dut.cOut; 
+
+
+
 endmodule 
