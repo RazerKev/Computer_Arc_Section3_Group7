@@ -38,18 +38,18 @@ always #10 clock <= ~clock;
 
 	always begin
 	     #10// load in data into regfile, write it to reg 29 
+		  write <= 1'b1;
 		  data <= 64'd14;
 		  writeReg <= 5'd29;
 		  #10
         data <= 64'd14;
 		  writeReg <= 5'd30; // load in the same value onto reg 30
-        #10
-		  write <= 1'b0; //disable write, the value in regfile will not write
+		   //disable write, the value in regfile will not write
 		  #10// now we have to select what goes into alu on a side, operation, and enable writeram 
 		  muxSel <= 1'b0; 
 		  sel <= 5'b10000;//a+b
 		  cin <= 1'b0;
-		  writeRam = 1'b1; 
+		  writeRam = 1'b0; 
 		  #10 //a-b
 		  muxSel <= 1'b0; 
 		  sel <= 5'b10010;
