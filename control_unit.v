@@ -1,318 +1,83 @@
-module control_unit (clock, reset, instr, status, k, controlWord); 
-
-input clock; 
-input reset; 
-input [31:0] instr; 
-output [63:0] k; 
-output [31:0] controlWord; 
-
-//I-type            //We need to set SB to 0 or ground 
-//addi                 DA           SA           IMM       FS      WR    WM   EN_EM  EN_ALU  EN_B  EN_PC    PS     SL   SELB   PCSEL
-assign ADDI  = {instr [4:0], instr [9:5], instr [21:10], 5'b10000, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b0, 1'b1,  1'b0 };
-assign SUBI  = {instr [4:0], instr [9:5], instr [21:10], 5'b10010, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b0, 1'b1,  1'b0 };
-assign ADDIS = {instr [4:0], instr [9:5], instr [21:10], 5'b10000, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b1, 1'b1,  1'b0 };
-assign SUBIS = {instr [4:0], instr [9:5], instr [21:10], 5'b10010, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b1, 1'b1,  1'b0 };
-assign ANDI  = {instr [4:0], instr [9:5], instr [21:10], 5'b01000, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b0, 1'b1,  1'b0 };
-assign ORRI  = {instr [4:0], instr [9:5], instr [21:10], 5'b00010, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b0, 1'b1,  1'b0 };
-//XOR and immediate 
-assign EORI  = {instr [4:0], instr [9:5], instr [21:10], 5'b01100, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b0, 1'b1,  1'b0 };
-//AND with immediate
-assign ANDIS = {instr [4:0], instr [9:5], instr [21:10], 5'b01000, 1'b1, 1'b0, 1'b0,   1'b1,  1'b0, 1'b0  , 2'b01, 1'b1, 1'b1,  1'b0 }; 
-
-//R-type               DA           SA           SHAMT       SB           FS      WR    WM   EN_MEM  EN_ALU EN_B  EN_PC   PS    SELB   PCSEL    SL  
-assign ADD   = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b10000, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b0};
-assign SUB   = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b10010, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b0};
-// add with flags 
-assign ADDS  = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b10000, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b1};
-// subtract with flags 
-assign SUBS  = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b10000, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b1};
-assign AND   = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b01000, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b0};
-assign ORR   = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b00100, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b0};          
-//XOR
-assign EOR   = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b01100, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b0};     
-//AND with flags
-assign ANDS  = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b01000, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b1};       
-//right shift 
-assign LSR   = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b10100, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b0};        
-//left shift  
-assign LSL   = {instr [4:0], instr [9:5], instr [15:10], instr[20:16], 5'b11000, 1'b1, 1'b0,  1'b0,   1'b1, 1'b0, 1'b0, 2'b01,  1'b0,   1'b0,  1'b0};
-                          
-//Data transfer 
-// D-type              DA           SA       9bit- IMM       op2           SB           FS      WR    WM   EN_MEM  EN_ALU  EN_B  EN_PC   PS    SELB  PCSEL  SL         
-//store register  
-assign STUR  = {instr [4:0], instr [9:5], instr [18:10], instr[20:19], instr[25:21], 5'b10000, 1'b0, 1'b1,  1'b1,  1'b0,   1'b0, 1'b0, 2'b01, 2'b1,  1'b0, 1'b0};             
-//Load Register 
-assign LDUR  = {instr [4:0], instr [9:5], instr [18:10], instr[20:19], instr[25:21], 5'b10000, 1'b1, 1'b0,  1'b1,  1'b0,   1'b0, 1'b0, 2'b01, 2'b1,  1'b0, 1'b0}; 
-
-assign B_cond = { 5'b
-
-module B (instruction, state, controlword, nextState, K); 
-	output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b11; 
-	assign DA = 5'b11111; //Dont care
-	assign SA = 5'b11111; //dont care
-	assign SB = 5'b11111; //dont care
-	assign Fsel = 5'b0000; //dont care, A and B are not inverted 
-	assign regW = 1'b0; //dont write 
-	assign ramW = 1'b0; //dont write 
-	assign EN_MEM = 1'b0; 
-	assign EN_ALU = 1'b1; 
-	assign EN_B = 1'b0;
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0; // dont care 
-	assign PCsel = 1'b1; //send K to PC
-	assign SL = 1'b0; //dont change status bits 
-	
-   assign K = {38 {1'b0}, instruction [25:0]}; 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b00;  
-endmodule 
-	
-module R (instruction, state, controlword, nextState, K); 
-
-   output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b01; 
-	assign DA = controlword [29:25];
-	assign SA = controlword [24:20];  
-	assign SB = controlword [19:15]; 
-	assign Fsel = controlword [14:10];  
-	assign regW = 1'b1;  
-	assign ramW = 1'b0; 
-	assign EN_MEM = 1'b0; 
-	assign EN_ALU = 1'b1; 
-	assign EN_B = 1'b0;
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0;  
-	assign PCsel = 1'b0; 
-	assign SL = controlword[0];  
-	
-   assign K = {58 {1'b0}, instruction [15:10]}; // this is for 6 bit SHMT 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b00;  
-	
-endmodule 		
-	
-module I_arithmetic ( instruction, state, controlword, nextState, K); 
-   output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b01; 
-	assign DA = controlword [29:25];
-	assign SA = controlword [24:20];  
-	assign SB = controlword [19:15]; 
-	assign Fsel = controlword [14:10];  
-	assign regW = 1'b1;  
-	assign ramW = 1'b0; 
-	assign EN_MEM = 1'b0; 
-	assign EN_ALU = 1'b1; 
-	assign EN_B = 1'b0;
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0;  
-	assign PCsel = 1'b0; 
-	assign SL = 1'b0;  
-	
-   assign K = {52 {1'b0}, instruction [21:10]}; // this is for the 12 bit immediate 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b00;  
-	
-endmodule 	
-	
-module I_logic ( instruction, state, controlword, nextState, K); 
-   output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b01; 
-	assign DA = controlword [29:25];
-	assign SA = controlword [24:20];  
-	assign SB = controlword [19:15]; 
-	assign Fsel = controlword [14:10];  
-	assign regW = 1'b1;  
-	assign ramW = 1'b0; 
-	assign EN_MEM = 1'b0; 
-	assign EN_ALU = 1'b1; 
-	assign EN_B = 1'b0;
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0;  
-	assign PCsel = 1'b0; 
-	assign SL = 1'b0;  
-	
-   assign K = {52 {1'b0}, instruction [21:10]}; 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b00;  
-	
-endmodule 		
-	
-module WI (instruction, state, controlword, nextState, K);
-	output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b01; 
-	assign DA = controlword [28:24];
-	assign SA = controlword [23:19];  
-	assign SB = controlword [18:14]; 
-	assign Fsel = controlword [13:9];  
-	assign regW = 1'b1;  
-	assign ramW = 1'b0; 
-	assign EN_MEM = 1'b0; 
-	assign EN_ALU = 1'b1; 
-	assign EN_B = 1'b0;
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0;  
-	assign PCsel = 1'b0; 
-	assign SL = controlword[0];  
-	
-   assign K = {52 {1'b0}, instruction [21:10]}; // this is for the 12 bit immediate 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b00;  
-	
-endmodule 		
-	
-module D (instruction, state, controlword, nextState, K);
-	output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b01; 
-	assign DA = controlword [29:25];
-	assign SA = controlword [24:20];  
-	assign SB = 5'b1111; // we dont care about second Source reg  
-	assign Fsel = controlword [14:10];  
-	assign regW = controlword[15]; 
-	assign ramW = controlword[16]; 
-	assign EN_MEM = 1'b1; 
-	assign EN_ALU = 1'b0; //?
-	assign EN_B = 1'b0;   //?
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0; // dont care  
-	assign PCsel = 1'b1; // output SA
-	assign SL = 1'b0;  
-	
-   assign K = {53 {1'b0}, instruction [20:10]}; // this is for the 11 bit immediate 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b00;  
-	
-endmodule 		
-
-module B_link ((instruction, state, controlword, nextState, K); 
-	output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b11; 
-	assign DA = 5'b11111; //Dont care
-	assign SA = 5'b11111; //dont care
-	assign SB = 5'b11111; //dont care
-	assign Fsel = 5'b0000; //dont care, A and B are not inverted 
-	assign regW = 1'b0; //dont write 
-	assign ramW = 1'b0; //dont write 
-	assign EN_MEM = 1'b0; 
-	assign EN_ALU = 1'b1; 
-	assign EN_B = 1'b0;
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0; // dont care 
-	assign PCsel = 1'b1; //send K to PC
-	assign SL = 1'b0; //dont change status bits 
-	
-   assign K = {38 {1'b0}, instruction [25:0]}; 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b01;  
-endmodule 
-
-module B (instruction, state, controlword, nextState, K); 
-	output [30:0] controlword;
-	output [1:0] nextState; 
-	output [63:0] K;
-	input [31:0] insruction:  
-	input [1:0] state; 
-	
-	wire [1:0] Psel;
-   wire [4:0] DA, SA, SB, Fsel;
-	wire regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL; 
-	
-	assign Psel = 2'b11; 
-	assign DA = 5'b11111; //Dont care
-	assign SA = 5'b11111; //dont care
-	assign SB = 5'b11111; //dont care
-	assign Fsel = 5'b0000; //dont care, A and B are not inverted 
-	assign regW = 1'b0; //dont write 
-	assign ramW = 1'b0; //dont write 
-	assign EN_MEM = 1'b0; 
-	assign EN_ALU = 1'b1; 
-	assign EN_B = 1'b0;
-	assign EN_PC = 1'b0; 
-	assign selB = 1'b0; // dont care 
-	assign PCsel = 1'b1; //send K to PC
-	assign SL = 1'b0; //dont change status bits 
-	
-   assign K = {38 {1'b0}, instruction [25:0]}; 
-	assign controlWord = {Psel, DA, SA, SB, Fsel, regW, ramW, EN_MEM, EN_ALU, EN_B, EN_PC, Bsel, PCsel, SL};
-	
-	assign nextState = 2'b00;  
-endmodule 
-	
-
-
-
-
-
-
-
-
+module control_unit(instruction, status, reset, clock, controlWord, K);
+    parameter cw_bits = 31;
+    parameter K_bits = 64;
+    input [31:0] instruction;
+    input [4:0] status;     // V, C, N, Z
+    input reset, clock;
+    output [cw_bits-1:0] controlWord;
+    output [K_bits-1:0] K;
+    
+    wire [10:0] opcode;
+    
+    assign opcode = instruction[31:21];
+    
+    // partial control words
+    wire [cw_bits+K_bits+1:0] branch_cw, other_cw;
+    
+    // controlWord
+    wire [cw_bits-1:0] D_Transfer_cw, I_Arithmetic_cw, I_Logic_cw, IW_cw, R_ALU_cw;
+    wire [cw_bits-1:0] B_cw, B_conditional_cw, BL_cw, CBZ_CBNZ_cw, BR_cw;
+    
+    // nextState
+    wire [1:0] D_Transfer_ns, I_Arithmetic_ns, I_Logic_ns, IW_ns, R_ALU_ns;
+    wire [1:0] B_ns, B_conditional_ns, BL_ns, CBZ_CBNZ_ns, BR_ns;
+    
+    // K
+    wire [K_bits-1:0] D_Transfer_K, I_Arithmetic_K, I_Logic_K, IW_K, R_ALU_K;
+    wire [K_bits-1:0] B_K, B_conditional_K, BL_K, CBZ_CBNZ_K, BR_K;
+    
+    // concatenated controlWord + K + nextState
+    wire [cw_bits+K_bits+1:0] D_Transfer_cwc, I_Arithmetic_cwc, I_Logic_cwc, IW_cwc, R_ALU_cwc;
+    wire [cw_bits+K_bits+1:0] B_cwc, B_conditional_cwc, BL_cwc, CBZ_CBNZ_cwc, BR_cwc;
+    
+    // state logic
+    wire [1:0] nextState;
+    reg [1:0] state;
+    always @(posedge clock or posedge reset) begin
+        if(reset)
+            state <= 2'b00;
+        else
+            state <= nextState;
+    end
+    
+    // decoder module definitions
+    B dec1_000 (instruction, state, B_cw, B_ns, B_K);
+    assign B_cwc = {B_cw, B_K, B_ns};
+    B_cond dec1_010 (status, instruction, state, B_conditional_cw, B_conditional_ns, B_conditional_K);
+    assign B_conditional_cwc = {B_conditional_cw, B_conditional_K, B_conditional_ns};
+    B_link dec1_100 (instruction, state, BL_cw, BL_ns, BL_K);
+    assign BL_cwc = {BL_cw, BL_K, BL_ns};
+    B_compare dec1_101 (status, instruction, state, CBZ_CBNZ_cw, CBZ_CBNZ_ns, CBZ_CBNZ_K);
+    assign CBZ_CBNZ_cwc = {CBZ_CBNZ_cw, CBZ_CBNZ_K, CBZ_CBNZ_ns};
+    B_to_reg dec1_110 (instruction, state, BR_cw, BR_ns, BR_K);
+    assign BR_cwc = {BR_cw, BR_K, BR_ns};
+    
+    D dec0_000 (instruction, state, D_Transfer_cw, D_Transfer_ns, D_Transfer_K);
+    assign D_Transfer_cwc = {D_Transfer_cw, D_Transfer_K, D_Transfer_ns};
+    I_arithmetic dec0_010 (instruction, state, I_Arithmetic_cw, I_Arithmetic_ns, I_Arithmetic_K);
+    assign I_Arithmetic_cwc = {I_Arithmetic_cw, I_Arithmetic_K, I_Arithmetic_ns};
+    I_logic dec0_100 (instruction, state, I_Logic_cw, I_Logic_ns, I_Logic_K);
+    assign I_Logic_cwc = {I_Logic_cw, I_Logic_K, I_Logic_ns};
+    WI dec0_101 (instruction, state, IW_cw, IW_ns, IW_K);
+    assign IW_cwc = {IW_cw, IW_K, IW_ns};
+    R dec0_110 (instruction, state, R_ALU_cw, R_ALU_ns, R_ALU_K);
+    assign R_ALU_cwc = {R_ALU_cw, R_ALU_K, R_ALU_ns};
+    
+    // 8:1 mux to select between branch instructions
+    Mux8to1Nbit branch_mux (opcode[10:8],
+        B_cwc, 0, B_conditional_cwc, 0, BL_cwc,
+        CBZ_CBNZ_cwc, BR_cwc, 0, branch_cw);
+    defparam branch_mux.N = (cw_bits+K_bits+2);
+    
+    // 8:1 mux to select between all other instructions
+    Mux8to1Nbit other_mux (opcode[4:2],
+        D_Transfer_cwc, 0, I_Arithmetic_cwc, 0, I_Logic_cwc,
+        IW_cwc, R_ALU_cwc, 0, other_cw);
+    defparam other_mux.N = (cw_bits+K_bits+2);
+    
+    // 2:1 mux to select between branch instructions and all others
+    assign controlWord = opcode[5] ? branch_cw[cw_bits+K_bits+1:K_bits+2] : other_cw[cw_bits+K_bits+1:K_bits+2];
+    assign K = opcode[5] ? branch_cw[K_bits+1:2] : other_cw[K_bits+1:2];
+    assign nextState = opcode[5] ? branch_cw[1:0] : other_cw[1:0];
+    
+endmodule
